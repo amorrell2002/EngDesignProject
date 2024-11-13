@@ -1,5 +1,7 @@
 int lights [6];
 
+#define RNGSEED 2002
+
 #define MOD1PINBUT 1
 #define MOD1PINLED 2
 
@@ -37,6 +39,8 @@ void setup()
     //Set button pins to input (floating input, needs pulldown?)
     setPinMode(buttonPins, 6, INPUT);
 
+    //Random Seed
+    randomSeed(RNGSEED);
 
 }
 
@@ -62,9 +66,10 @@ void gameLoop()
 {
     //Choose led's to light up
 
-    //RNG light picking
+    //RNG light picking, will only flip "false" ledValues
+    ledRNG();
 
-    //Write new list to lights
+    //Write ledValues to lights if ledEnable == true
     writeLights();
 
     //Listen for player input
@@ -74,6 +79,32 @@ void gameLoop()
     writeLights();
 }
 
+void ledRNG()
+{
+  int* ledList = getFalseLEDList();
+  int ledCount = ledList[0];
+  int chosenLED = random(1, ledCount + 2);
+  ledValues[ledList[chosenLED]] = true;
+  
+}
+
+int* getFalseLEDList()
+{
+  int ledList [7] = {0};
+  int falseCount = 0;
+  for(int i = 0; i < 6; i++)
+  {
+    if(!ledValues[i])
+    {
+      falseCount++;
+      ledList[falseCount] = i;
+    }
+  }
+  ledList[0] = falseCount;
+  return ledList;
+}
+
+//We may need some modifications depending on the button final pinout
 void buttonListen(uint8_t value)
 {
   //Return buttonNum pressed
