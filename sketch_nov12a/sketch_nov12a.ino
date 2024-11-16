@@ -28,21 +28,17 @@ int ledPins [6] = {MOD1PINLED, MOD2PINLED, MOD3PINLED, MOD4PINLED, MOD5PINLED, M
 
 bool ledValues[6] = {false};
 
+unsigned long currTime = millis();
+
+#define NEWLEDINTERVAL 2000
+
+#define GAMEDURATION 45000
+
+unsigned int score = 0;
 
 bool ledEnable = true;
 
-void setup()
-{
-    //Set LED pins to output
-    setPinMode(ledPins, 6, OUTPUT);
 
-    //Set button pins to input (floating input, needs pulldown?)
-    setPinMode(buttonPins, 6, INPUT);
-
-    //Random Seed
-    randomSeed(RNGSEED);
-
-}
 
 void setPinMode(int* pins, int numOfPins, uint8_t mode)
 {
@@ -54,20 +50,47 @@ void setPinMode(int* pins, int numOfPins, uint8_t mode)
 
 
 
+
+void setup()
+{
+
+    Serial.init(9600);
+    //Set LED pins to output
+    setPinMode(ledPins, 6, OUTPUT);
+
+    //Set button pins to input (floating input, needs pulldown?)
+    setPinMode(buttonPins, 6, INPUT);
+
+    //Random Seed
+    randomSeed(RNGSEED);
+
+}
+
+
+
 int main()
 {
-  while(true)
+  
+  while(millis() < GAMEDURATION)
   {
     gameLoop();
   }
+
+  Serial.print("Points Scored: ");
+  Serial.println(points);
+  return 1;
 }
 
 void gameLoop()
 {
     //Choose led's to light up
 
-    //RNG light picking, will only flip "false" ledValues
-    ledRNG();
+    //RNG light picking every NEWLEDINTERVAL milliseconds, will only flip "false" ledValues 
+    if(millis() > currTime + NEWLEDINTERVAL)
+    {
+      ledRNG();
+      currTime = millis();
+    }
 
     //Write ledValues to lights if ledEnable == true
     writeLights();
@@ -107,14 +130,14 @@ int* getFalseLEDList()
 //We may need some modifications depending on the button final pinout
 void buttonListen(uint8_t value)
 {
-  //Return buttonNum pressed
   for(int i = 0; i < 6; i++)
   {
-    if(digitalRead(buttonPins[i]) == value && ledValue[i])
+    if(digitalRead(buttonPins[i]) == value && ledValues[i])
     {
         //Point scored TODO
+        score++;
         //Disable Light
-        ledValue[i] = false;
+        ledValues[i] = false;
     }
 
   }
@@ -126,11 +149,11 @@ void writeLights()
     {
         if(ledValues[i] && ledEnable)
         {
-          digitalWrite(ledPin[i], HIGH)
+          digitalWrite(ledPins[i], HIGH);
         }
         else
         {
-          digitalWrite(ledPin[i], LOW)
+          digitalWrite(ledPins[i], LOW);
         }
     }
 }
