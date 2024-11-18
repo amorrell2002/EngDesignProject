@@ -21,11 +21,13 @@
 #define MOD6PINLED 5
 */
 
+#define BUZZPIN 11
+
 #define MODNUM 2
 
 #define NEWLEDINTERVAL 2000
 
-#define GAMEDURATION 45000
+#define GAMEDURATION 25000
 
 
 int buttonPins [MODNUM] = {MOD1PINBUT, MOD2PINBUT};
@@ -44,6 +46,61 @@ unsigned int score = 0;
 
 bool ledEnable = true;
 
+void blockingBuzz(unsigned int duration, int freq)
+{
+  //magic num "1.3" is from https://docs.arduino.cc/built-in-examples/digital/toneMelody/
+  tone(BUZZPIN, freq, duration);
+  delay(duration * 1.3);
+  noTone(BUZZPIN);
+}
+
+void buzzPointScored()
+{
+  noTone(BUZZPIN);
+  delay(100);
+  tone(BUZZPIN, 440, 200);
+}
+
+void buzzEndSong()
+{
+  blockingBuzz(500, 523);
+  blockingBuzz(500, 440);
+  blockingBuzz(500, 329);
+  delay(1000);
+}
+
+void buzzStartSong()
+{
+  for(int i = 0; i < 3; i++)
+  {
+  blockingBuzz(500, 329);
+  }
+  /*
+  const int N2DUR = 1000;
+  tone(BUZZPIN, 329, 1000);
+  delay(N2DUR * 1.3);
+  noTone(BUZZPIN);
+  */
+  blockingBuzz(800, 440);
+}
+
+void buzzScore()
+{
+  unsigned int frequency = 440;
+  for(int i = 0; i < score; i++)
+  {
+    //1.0595 multiplied by current frequency should yield the next semitone
+    frequency = frequency * 1.0595;
+    if(frequency < 880)
+    {
+      blockingBuzz(500, frequency);
+    }
+    else
+    {
+      blockingBuzz(500, 880);
+    }
+  }
+}
 
 
 void setPinMode(int* pins, int numOfPins, uint8_t mode)
@@ -59,7 +116,6 @@ void setPinMode(int* pins, int numOfPins, uint8_t mode)
 
 void setup()
 {
-
     Serial.begin(9600);
     Serial.println("Serial Start...");
     //Set LED pins to output
@@ -77,7 +133,7 @@ void setup()
 
 void loop()
 {
-  
+  buzzStartSong();
   while(millis() < GAMEDURATION)
   {
     gameLoop();
@@ -85,9 +141,17 @@ void loop()
 
   Serial.print("Points Scored: ");
   Serial.println(score);
+
+  //turn off leds
+  ledEnable = false;
+  writeLights();
+
+
+  buzzEndSong();
+  buzzScore();
   while(true)
   {
-    delay(5);
+    delay(100);
   }
 }
 
@@ -152,7 +216,9 @@ void buttonListen(uint8_t value)
         score++;
         //Disable Light
         ledValues[i] = false;
+        //Output score
         Serial.println("Point Scored!");
+        buzzPointScored();
     }
 
   }
