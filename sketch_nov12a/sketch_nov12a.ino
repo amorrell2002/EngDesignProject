@@ -1,15 +1,15 @@
-int lights [6];
+#include <stdbool.h>
 
 #define RNGSEED 2002
 
-#define MOD1PINBUT 1
+#define MOD1PINBUT 0
 #define MOD1PINLED 2
 
-#define MOD2PINBUT 4
-#define MOD2PINLED 4
-
-#define MOD3PINBUT 4
-#define MOD3PINLED 4
+#define MOD2PINBUT 3
+#define MOD2PINLED 5
+/*
+#define MOD3PINBUT 5
+#define MOD3PINLED 6
 
 #define MOD4PINBUT 4
 #define MOD4PINLED 4
@@ -19,20 +19,26 @@ int lights [6];
 
 #define MOD6PINBUT 4
 #define MOD6PINLED 5
+*/
 
-#include <stdbool.h>
-
-int buttonPins [6] = {MOD1PINBUT, MOD2PINBUT, MOD3PINBUT, MOD4PINBUT, MOD5PINBUT, MOD6PINBUT};
-
-int ledPins [6] = {MOD1PINLED, MOD2PINLED, MOD3PINLED, MOD4PINLED, MOD5PINLED, MOD6PINLED};
-
-bool ledValues[6] = {false};
-
-unsigned long currTime = millis();
+#define MODNUM 2
 
 #define NEWLEDINTERVAL 2000
 
 #define GAMEDURATION 45000
+
+
+int buttonPins [MODNUM] = {MOD1PINBUT, MOD2PINBUT};
+
+int ledPins [MODNUM] = {MOD1PINLED, MOD2PINLED};
+
+bool ledValues[MODNUM] = {false};
+
+
+
+unsigned long currTime = millis();
+
+
 
 unsigned int score = 0;
 
@@ -54,12 +60,13 @@ void setPinMode(int* pins, int numOfPins, uint8_t mode)
 void setup()
 {
 
-    Serial.init(9600);
+    Serial.begin(9600);
+    Serial.println("Serial Start...");
     //Set LED pins to output
-    setPinMode(ledPins, 6, OUTPUT);
+    setPinMode(ledPins, MODNUM, OUTPUT);
 
-    //Set button pins to input (floating input, needs pulldown?)
-    setPinMode(buttonPins, 6, INPUT);
+    //Set button pins to input (floating input, needs pullup?)
+    setPinMode(buttonPins, MODNUM, INPUT_PULLUP);
 
     //Random Seed
     randomSeed(RNGSEED);
@@ -68,7 +75,7 @@ void setup()
 
 
 
-int main()
+void loop()
 {
   
   while(millis() < GAMEDURATION)
@@ -77,8 +84,11 @@ int main()
   }
 
   Serial.print("Points Scored: ");
-  Serial.println(points);
-  return 1;
+  Serial.println(score);
+  while(true)
+  {
+    delay(5);
+  }
 }
 
 void gameLoop()
@@ -96,7 +106,7 @@ void gameLoop()
     writeLights();
 
     //Listen for player input
-    buttonListen(HIGH);
+    buttonListen(LOW);
 
     //update leds
     writeLights();
@@ -104,18 +114,22 @@ void gameLoop()
 
 void ledRNG()
 {
-  int* ledList = getFalseLEDList();
+  int ledList [MODNUM + 1] = {0};
+  getFalseLEDList(ledList);
   int ledCount = ledList[0];
-  int chosenLED = random(1, ledCount + 2);
+  Serial.print("LED OFF COUNT: ");
+  Serial.println(ledCount);
+  int chosenLED = random(1, ledCount + 1);
+  Serial.print("Chosen LED: ");
+  Serial.println(chosenLED);
   ledValues[ledList[chosenLED]] = true;
   
 }
 
-int* getFalseLEDList()
+void getFalseLEDList(int* ledList)
 {
-  int ledList [7] = {0};
   int falseCount = 0;
-  for(int i = 0; i < 6; i++)
+  for(int i = 0; i < MODNUM; i++)
   {
     if(!ledValues[i])
     {
@@ -130,7 +144,7 @@ int* getFalseLEDList()
 //We may need some modifications depending on the button final pinout
 void buttonListen(uint8_t value)
 {
-  for(int i = 0; i < 6; i++)
+  for(int i = 0; i < MODNUM; i++)
   {
     if(digitalRead(buttonPins[i]) == value && ledValues[i])
     {
@@ -138,6 +152,7 @@ void buttonListen(uint8_t value)
         score++;
         //Disable Light
         ledValues[i] = false;
+        Serial.println("Point Scored!");
     }
 
   }
@@ -145,7 +160,7 @@ void buttonListen(uint8_t value)
 
 void writeLights()
 {
-    for(int i = 0; i < 6; i++)
+    for(int i = 0; i < MODNUM; i++)
     {
         if(ledValues[i] && ledEnable)
         {
