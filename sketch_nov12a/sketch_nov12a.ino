@@ -1,7 +1,9 @@
 #include <stdbool.h>
 
+
 #define RNGSEED 2002
 
+//Button Pin Macros for prototyping
 #define MOD1PINBUT 0
 #define MOD1PINLED 2
 
@@ -23,29 +25,35 @@
 
 #define BUZZPIN 11
 
+//Number of modules currently connected
 #define MODNUM 2
 
+//How frequently (in ms) a new led is chosen to be lit
 #define NEWLEDINTERVAL 2000
-
+//Game duration (in ms)
 #define GAMEDURATION 25000
 
-
+//Data Structures 
+//Associating the index(module) with a pin for the button
 int buttonPins [MODNUM] = {MOD1PINBUT, MOD2PINBUT};
-
+//Same but leds
 int ledPins [MODNUM] = {MOD1PINLED, MOD2PINLED};
 
+//This datastructure contatins which leds are currenlty lit(stored as true) or unlit(stored as false)
 bool ledValues[MODNUM] = {false};
 
 
-
+//Initialize the currTime variable for timing
 unsigned long currTime = millis();
 
 
-
+//Points scored by player
 unsigned int score = 0;
 
+//Toggle to turn on and off all LED's reguardless of ledValue status
 bool ledEnable = true;
 
+//A wrapper fuction that introduces a blocking delay for easier music programming
 void blockingBuzz(unsigned int duration, int freq)
 {
   //magic num "1.3" is from https://docs.arduino.cc/built-in-examples/digital/toneMelody/
@@ -54,6 +62,7 @@ void blockingBuzz(unsigned int duration, int freq)
   noTone(BUZZPIN);
 }
 
+//Called when a point is scored by the player
 void buzzPointScored()
 {
   noTone(BUZZPIN);
@@ -61,6 +70,7 @@ void buzzPointScored()
   tone(BUZZPIN, 440, 200);
 }
 
+//Played at the end of a game before the players score is announced
 void buzzEndSong()
 {
   blockingBuzz(500, 523);
@@ -69,6 +79,7 @@ void buzzEndSong()
   delay(1000);
 }
 
+//Intoduction song, plays when game begins
 void buzzStartSong()
 {
   for(int i = 0; i < 3; i++)
@@ -84,6 +95,7 @@ void buzzStartSong()
   blockingBuzz(800, 440);
 }
 
+//Annouces player score with a note that increases by 1 semitone for each point, topping out at 880 hz
 void buzzScore()
 {
   unsigned int frequency = 440;
@@ -102,7 +114,7 @@ void buzzScore()
   }
 }
 
-
+//Setter function for pin data stuctures
 void setPinMode(int* pins, int numOfPins, uint8_t mode)
 {
   for(int i = 0; i < numOfPins; i++)
@@ -134,6 +146,7 @@ void setup()
 void loop()
 {
   buzzStartSong();
+  //Ennter gameloop until we surpass game duration
   while(millis() < GAMEDURATION)
   {
     gameLoop();
@@ -149,6 +162,7 @@ void loop()
 
   buzzEndSong();
   buzzScore();
+  //Idle loop, require player reset
   while(true)
   {
     delay(100);
@@ -178,18 +192,25 @@ void gameLoop()
 
 void ledRNG()
 {
+  //Create ledList and get currently unlit leds to choose one to be lit
   int ledList [MODNUM + 1] = {0};
   getFalseLEDList(ledList);
+  
   int ledCount = ledList[0];
   Serial.print("LED OFF COUNT: ");
   Serial.println(ledCount);
+  //RNG function random() is used to pick one of the leds in ledList
   int chosenLED = random(1, ledCount + 1);
   Serial.print("Chosen LED: ");
   Serial.println(chosenLED);
+
+  //Set chosen led value to true in ledValues
   ledValues[ledList[chosenLED]] = true;
   
 }
 
+//Modifies the passed list pointer. ledList[0] contains number of currently unlit leds.
+//Every index after is the pin of that unlit led
 void getFalseLEDList(int* ledList)
 {
   int falseCount = 0;
@@ -205,7 +226,8 @@ void getFalseLEDList(int* ledList)
   return ledList;
 }
 
-//We may need some modifications depending on the button final pinout
+//Check all connected buttons for player input
+//If input is detected, and the button's associated led is also lit, then record point scored
 void buttonListen(uint8_t value)
 {
   for(int i = 0; i < MODNUM; i++)
@@ -224,6 +246,8 @@ void buttonListen(uint8_t value)
   }
 }
 
+//Iterate over ledValues and output the correct volatge for each bool value
+//Turns all LEDs off when ledEnable == false
 void writeLights()
 {
     for(int i = 0; i < MODNUM; i++)
